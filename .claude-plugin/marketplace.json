@@ -1,0 +1,5 @@
+{
+  "name": "context-bar",
+  "owner": { "name": "ds-trietly" },
+  "plugins": [{ "name": "context-bar", "source": "./" }]
+}
