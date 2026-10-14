@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { fillColor, formatStatus, formatTokens, renderBar } from './format'
+import { fillColor, formatStatus, formatTokens, renderBar, shortenBranch } from './format'
 
 test('bar puts the percent at the fill edge', async () => {
   expect(renderBar(0)).toBe('[0%░░░░░░░░░░]')
@@ -25,6 +25,12 @@ test('color stays off until the window fills', async () => {
   expect(fillColor(80)).toBe('error')
 })
 
+test('long branch names keep their head', async () => {
+  expect(shortenBranch('main')).toBe('main')
+  expect(shortenBranch('feat/TPDX4-1426_abcdefgh')).toBe('feat/TPDX4-1426_abcdefgh')
+  expect(shortenBranch('np/TPDX3-1804_record-postgres-lro-version')).toBe('np/TPDX3-1804_record-po…')
+})
+
 test('status splits usage from model and branch', async () => {
   const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5' }
   expect(formatStatus({ ...base, branch: 'main' })).toEqual({
@@ -32,5 +38,8 @@ test('status splits usage from model and branch', async () => {
     details: ' | Opus 5.5 | main',
   })
   expect(formatStatus({ ...base, branch: null }).details).toBe(' | Opus 5.5')
+  expect(formatStatus({ ...base, branch: 'feature/OTOP-6363-mpdp-mpqa-test-image' }).details).toBe(
+    ' | Opus 5.5 | feature/OTOP-6363-mpdp-…',
+  )
   expect(formatStatus({ ...base, percent: null, tokens: null, branch: null }).usage).toBe('[--%░░░░░░░░░░] -/1M')
 })

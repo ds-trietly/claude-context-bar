@@ -8,6 +8,8 @@ const EMPTY_CHAR = '░'
 const SEPARATOR = ' | '
 const WARN_PERCENT = 50
 const ALERT_PERCENT = 80
+const MAX_BRANCH_LENGTH = 24
+const ELLIPSIS = '…'
 
 // The percent sits at the fill edge so it hides no cells
 export function renderBar(percent: number | null): string {
@@ -35,12 +37,20 @@ export function fillColor(percent: number | null): ThemeKey | undefined {
   return percent < ALERT_PERCENT ? 'warning' : 'error'
 }
 
+// A branch name's head carries its type and ticket, so the tail is cut
+export function shortenBranch(branch: string): string {
+  if (branch.length <= MAX_BRANCH_LENGTH) {
+    return branch
+  }
+  return `${branch.slice(0, MAX_BRANCH_LENGTH - ELLIPSIS.length)}${ELLIPSIS}`
+}
+
 // Usage is split from details so the drawing can color it alone
 export function formatStatus(snapshot: Snapshot): { usage: string; details: string } {
   const used = snapshot.tokens === null ? '-' : formatTokens(snapshot.tokens)
   const parts = [snapshot.model]
   if (snapshot.branch !== null) {
-    parts.push(snapshot.branch)
+    parts.push(shortenBranch(snapshot.branch))
   }
   return {
     usage: `${renderBar(snapshot.percent)} ${used}/${formatTokens(snapshot.window)}`,
