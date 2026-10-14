@@ -1,0 +1,6 @@
+{
+  "name": "context-bar",
+  "version": "0.1.0",
+  "description": "Context window fill bar, token count, model and git branch on the right of the prompt footer",
+  "types": "./types/index.d.ts"
+}
