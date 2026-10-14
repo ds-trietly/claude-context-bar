@@ -1,11 +1,16 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, SessionContextUsage } from 'claude-code'
 
-import { fillColor, formatStatus } from './format'
+import { formatStatus } from './format'
+import type { Run } from './format'
 
 const GIT_TIMEOUT_MS = 1_000
 // How the engine joins the footer's mode labels
 const MODE_SEPARATOR = ' & '
+
+function runStyle(run: Run): { color: Run['color'] } | { dimColor: true } {
+  return run.color === undefined ? { dimColor: true } : { color: run.color }
+}
 
 const snapshot = atom({ plugin: 'context-bar', key: 'snapshot' } as const, null)
 
@@ -54,22 +59,20 @@ export const register: Register = on => {
   })
 
   // SessionMode is the dim label slot at the right of the footer row; drawing
-  // it ourselves lets the usage part take a color while the rest stays dim
+  // it ourselves lets parts of the line take a color while the rest stays dim
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
     const current = await read($, snapshot)
     if (current === null) {
       return next(e)
     }
     const { Text } = $.ui.resolve(e)
-    const { usage, details } = formatStatus(current)
-    const color = fillColor(current.percent)
-    const usageStyle = color === undefined ? { dimColor: true } : { color }
     const otherModes = e.props.modes.map(mode => `${mode}${MODE_SEPARATOR}`).join('')
     return (
       <Text>
         {otherModes === '' ? null : <Text dimColor>{otherModes}</Text>}
-        <Text {...usageStyle}>{usage}</Text>
-        <Text dimColor>{details}</Text>
+        {formatStatus(current).map(run => (
+          <Text {...runStyle(run)}>{run.text}</Text>
+        ))}
       </Text>
     )
   })

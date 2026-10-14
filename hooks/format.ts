@@ -45,15 +45,33 @@ export function shortenBranch(branch: string): string {
   return `${branch.slice(0, MAX_BRANCH_LENGTH - ELLIPSIS.length)}${ELLIPSIS}`
 }
 
-// Usage is split from details so the drawing can color it alone
-export function formatStatus(snapshot: Snapshot): { usage: string; details: string } {
+// A stretch of the line in one color; undefined draws it dim
+export type Run = { text: string; color: ThemeKey | undefined }
+
+function dim(text: string): Run {
+  return { text, color: undefined }
+}
+
+// Adjacent runs of one color draw as one Text
+function mergeRuns(runs: Run[]): Run[] {
+  const merged: Run[] = []
+  for (const run of runs) {
+    const last = merged.at(-1)
+    if (last !== undefined && last.color === run.color) {
+      last.text += run.text
+    } else {
+      merged.push({ ...run })
+    }
+  }
+  return merged
+}
+
+export function formatStatus(snapshot: Snapshot): Run[] {
   const used = snapshot.tokens === null ? '-' : formatTokens(snapshot.tokens)
+  const usage = `${renderBar(snapshot.percent)} ${used}/${formatTokens(snapshot.window)}`
   const parts = [snapshot.model]
   if (snapshot.branch !== null) {
     parts.push(shortenBranch(snapshot.branch))
   }
-  return {
-    usage: `${renderBar(snapshot.percent)} ${used}/${formatTokens(snapshot.window)}`,
-    details: `${SEPARATOR}${parts.join(SEPARATOR)}`,
-  }
+  return mergeRuns([{ text: usage, color: fillColor(snapshot.percent) }, ...parts.map(part => dim(`${SEPARATOR}${part}`))])
 }

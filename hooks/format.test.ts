@@ -31,15 +31,17 @@ test('long branch names keep their head', async () => {
   expect(shortenBranch('np/TPDX3-1804_record-postgres-lro-version')).toBe('np/TPDX3-1804_record-po…')
 })
 
-test('status splits usage from model and branch', async () => {
+test('status colors usage alone and keeps the rest dim', async () => {
   const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5' }
-  expect(formatStatus({ ...base, branch: 'main' })).toEqual({
-    usage: '[█6%░░░░░░░░░] 58k/1M',
-    details: ' | Opus 5.5 | main',
-  })
-  expect(formatStatus({ ...base, branch: null }).details).toBe(' | Opus 5.5')
-  expect(formatStatus({ ...base, branch: 'feature/OTOP-6363-mpdp-mpqa-test-image' }).details).toBe(
-    ' | Opus 5.5 | feature/OTOP-6363-mpdp-…',
+  expect(formatStatus({ ...base, branch: 'main' })).toEqual([
+    { text: '[█6%░░░░░░░░░] 58k/1M | Opus 5.5 | main', color: undefined },
+  ])
+  expect(formatStatus({ ...base, percent: 60, branch: null })).toEqual([
+    { text: '[██████60%░░░░] 58k/1M', color: 'warning' },
+    { text: ' | Opus 5.5', color: undefined },
+  ])
+  expect(formatStatus({ ...base, branch: 'feature/OTOP-6363-mpdp-mpqa-test-image' })[0]?.text).toBe(
+    '[█6%░░░░░░░░░] 58k/1M | Opus 5.5 | feature/OTOP-6363-mpdp-…',
   )
-  expect(formatStatus({ ...base, percent: null, tokens: null, branch: null }).usage).toBe('[--%░░░░░░░░░░] -/1M')
+  expect(formatStatus({ ...base, percent: null, tokens: null, branch: null })[0]?.text).toBe('[--%░░░░░░░░░░] -/1M | Opus 5.5')
 })

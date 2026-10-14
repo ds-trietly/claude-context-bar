@@ -30,10 +30,7 @@ test('usage stays dim below the warning level', async ($, on) => {
   answerHost(on, 'main')
   expect(await drawAt($, 30)).toMatchObject({
     type: 'Text',
-    children: [
-      { type: 'Text', props: { dimColor: true }, children: ['[███30%░░░░░░░] 60k/200k'] },
-      { type: 'Text', props: { dimColor: true }, children: [' | Opus 5.5 | main'] },
-    ],
+    children: [{ type: 'Text', props: { dimColor: true }, children: ['[███30%░░░░░░░] 60k/200k | Opus 5.5 | main'] }],
   })
 })
 
@@ -46,11 +43,11 @@ test('usage turns warning, then error, as the window fills', async ($, on) => {
 test('other modes stay ahead of the bar', async ($, on) => {
   answerHost(on, 'main')
   expect(await drawAt($, 30, ['focus', 'memory paused'], 'desktop')).toMatchObject({
-    children: [{ props: { dimColor: true }, children: ['focus & memory paused & '] }, {}, {}],
+    children: [{ props: { dimColor: true }, children: ['focus & memory paused & '] }, {}],
   })
 })
 
 test('a detached HEAD shows its short commit', async ($, on) => {
   answerHost(on, DETACHED)
-  expect(await drawAt($, 30)).toMatchObject({ children: [{}, { children: [' | Opus 5.5 | (abc1234)'] }] })
+  expect(await drawAt($, 30)).toMatchObject({ children: [{ children: ['[███30%░░░░░░░] 60k/200k | Opus 5.5 | (abc1234)'] }] })
 })
