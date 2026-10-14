@@ -7,6 +7,8 @@ import type { Run } from './format'
 const GIT_TIMEOUT_MS = 1_000
 // How the engine joins the footer's mode labels
 const MODE_SEPARATOR = ' & '
+// Columns left to the footer's left side (prompt hints, permission mode); an estimate
+const FOOTER_RESERVE = 50
 
 function runStyle(run: Run): { color: Run['color'] } | { dimColor: true } {
   return run.color === undefined ? { dimColor: true } : { color: run.color }
@@ -70,10 +72,11 @@ export const register: Register = on => {
     }
     const { Text } = $.ui.resolve(e)
     const otherModes = e.props.modes.map(mode => `${mode}${MODE_SEPARATOR}`).join('')
+    const maxWidth = e.viewport === undefined ? undefined : e.viewport.columns - FOOTER_RESERVE - otherModes.length
     return (
       <Text>
         {otherModes === '' ? null : <Text dimColor>{otherModes}</Text>}
-        {formatStatus(current).map(run => (
+        {formatStatus(current, maxWidth).map(run => (
           <Text {...runStyle(run)}>{run.text}</Text>
         ))}
       </Text>

@@ -61,3 +61,20 @@ test('rate-limit windows sit after usage, each colored by its fill', async () =>
     { text: ' | Opus 5.5', color: undefined },
   ])
 })
+
+test('narrow lines drop branch, then model, then limits, never usage', async () => {
+  const snapshot = {
+    percent: 6,
+    tokens: 58_000,
+    window: 1_000_000,
+    model: 'Opus 5.5',
+    branch: 'main',
+    rateLimits: [{ kind: 'five_hour', percentUsed: 3 }],
+  }
+  const lineAt = (maxWidth: number) => formatStatus(snapshot, maxWidth).map(run => run.text).join('')
+  expect(lineAt(47)).toBe('[█6%░░░░░░░░░] 58k/1M | 5h 3% | Opus 5.5 | main')
+  expect(lineAt(46)).toBe('[█6%░░░░░░░░░] 58k/1M | 5h 3% | Opus 5.5')
+  expect(lineAt(39)).toBe('[█6%░░░░░░░░░] 58k/1M | 5h 3%')
+  expect(lineAt(28)).toBe('[█6%░░░░░░░░░] 58k/1M')
+  expect(lineAt(0)).toBe('[█6%░░░░░░░░░] 58k/1M')
+})

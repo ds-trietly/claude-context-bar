@@ -77,17 +77,25 @@ function limitRuns(rateLimits: readonly RateLimit[]): Run[] {
   })
 }
 
-export function formatStatus(snapshot: Snapshot): Run[] {
+function lineWidth(segments: Run[][]): number {
+  const textWidth = segments.flat().reduce((sum, run) => sum + run.text.length, 0)
+  return textWidth + SEPARATOR.length * (segments.length - 1)
+}
+
+// Segments drop from the end until the line fits maxWidth; usage always stays
+export function formatStatus(snapshot: Snapshot, maxWidth = Infinity): Run[] {
   const used = snapshot.tokens === null ? '-' : formatTokens(snapshot.tokens)
   const usage = `${renderBar(snapshot.percent)} ${used}/${formatTokens(snapshot.window)}`
-  const parts = [snapshot.model]
-  if (snapshot.branch !== null) {
-    parts.push(shortenBranch(snapshot.branch))
-  }
-  const runs: Run[] = [{ text: usage, color: fillColor(snapshot.percent) }]
+  const segments: Run[][] = [[{ text: usage, color: fillColor(snapshot.percent) }]]
   if (snapshot.rateLimits.length > 0) {
-    runs.push(dim(SEPARATOR), ...limitRuns(snapshot.rateLimits))
+    segments.push(limitRuns(snapshot.rateLimits))
   }
-  runs.push(...parts.map(part => dim(`${SEPARATOR}${part}`)))
-  return mergeRuns(runs)
+  segments.push([dim(snapshot.model)])
+  if (snapshot.branch !== null) {
+    segments.push([dim(shortenBranch(snapshot.branch))])
+  }
+  while (segments.length > 1 && lineWidth(segments) > maxWidth) {
+    segments.pop()
+  }
+  return mergeRuns(segments.flatMap((segment, index) => (index === 0 ? segment : [dim(SEPARATOR), ...segment])))
 }

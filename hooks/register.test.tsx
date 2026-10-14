@@ -16,15 +16,22 @@ function answerHost(on: On, branch: string): void {
   on('session.measure', (_$, e) => ({ changed: e.changed }))
 }
 
-type Draw = { percent: number; modes?: string[]; surface?: RenderSurface; rateLimits?: SessionRateLimit[] }
+type Draw = {
+  percent: number
+  modes?: string[]
+  surface?: RenderSurface
+  rateLimits?: SessionRateLimit[]
+  columns?: number
+}
 
-async function drawAt($: Engine, { percent, modes = [], surface = 'terminal', rateLimits = [] }: Draw) {
+async function drawAt($: Engine, { percent, modes = [], surface = 'terminal', rateLimits = [], columns }: Draw) {
   await $.session.measure({
     context: { tokens: (WINDOW * percent) / 100, window: WINDOW, percent },
     rateLimits,
     changed: ['context'],
   })
-  const ui = await $.ui.mount({ plugin: 'context-bar', surface, component: 'SessionMode', props: { modes } })
+  const viewport = columns === undefined ? undefined : { columns, rows: 24 }
+  const ui = await $.ui.mount({ plugin: 'context-bar', surface, component: 'SessionMode', props: { modes }, viewport })
   return ui.drawn()
 }
 
@@ -64,4 +71,14 @@ test('a filling rate-limit window takes a color of its own', async ($, on) => {
       { props: { dimColor: true }, children: [' | Opus 5.5 | main'] },
     ],
   })
+})
+
+test('the line fits what the terminal leaves beside the footer hints', async ($, on) => {
+  answerHost(on, 'feature/OTOP-6363-mpdp-mpqa-test-image')
+  const lineAt = (text: string) => ({ children: [{ children: [text] }] })
+  expect(await drawAt($, { percent: 30, columns: 140 })).toMatchObject(
+    lineAt('[███30%░░░░░░░] 60k/200k | Opus 5.5 | feature/OTOP-6363-mpdp-…'),
+  )
+  expect(await drawAt($, { percent: 30, columns: 100 })).toMatchObject(lineAt('[███30%░░░░░░░] 60k/200k | Opus 5.5'))
+  expect(await drawAt($, { percent: 30, columns: 80 })).toMatchObject(lineAt('[███30%░░░░░░░] 60k/200k'))
 })
