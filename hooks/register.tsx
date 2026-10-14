@@ -9,15 +9,23 @@ const MODE_SEPARATOR = ' & '
 
 const snapshot = atom({ plugin: 'context-bar', key: 'snapshot' } as const, null)
 
-async function gitBranch($: EngineInterface): Promise<string | null> {
+async function git($: EngineInterface, args: string[]): Promise<string | null> {
   try {
-    const { exitCode, stdout } = await $.process.run(['git', 'branch', '--show-current'], {
-      timeoutMs: GIT_TIMEOUT_MS,
-    })
+    const { exitCode, stdout } = await $.process.run(['git', ...args], { timeoutMs: GIT_TIMEOUT_MS })
     return exitCode === 0 ? stdout.trim() || null : null
   } catch {
     return null
   }
+}
+
+// A detached HEAD (rebase, bisect) has no branch, so name the commit instead
+async function gitBranch($: EngineInterface): Promise<string | null> {
+  const branch = await git($, ['branch', '--show-current'])
+  if (branch !== null) {
+    return branch
+  }
+  const commit = await git($, ['rev-parse', '--short', 'HEAD'])
+  return commit === null ? null : `(${commit})`
 }
 
 async function refresh($: EngineInterface, context: SessionContextUsage): Promise<void> {
