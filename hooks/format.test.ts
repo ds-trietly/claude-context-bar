@@ -12,6 +12,7 @@ test('bar puts the percent at the fill edge', async () => {
 test('tokens shorten to k and M', async () => {
   expect(formatTokens(512)).toBe('512')
   expect(formatTokens(58_400)).toBe('58k')
+  expect(formatTokens(999_600)).toBe('1M')
   expect(formatTokens(1_000_000)).toBe('1M')
   expect(formatTokens(1_250_000)).toBe('1.3M')
 })

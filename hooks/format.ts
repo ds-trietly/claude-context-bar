@@ -16,8 +16,9 @@ export function formatTokens(count: number): string {
   if (count < 1_000) {
     return String(count)
   }
-  if (count < 1_000_000) {
-    return `${Math.round(count / 1_000)}k`
+  const thousands = Math.round(count / 1_000)
+  if (thousands < 1_000) {
+    return `${thousands}k`
   }
   return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
 }
