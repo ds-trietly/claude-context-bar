@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { formatStatus, formatTokens, renderBar } from './format'
+import { fillColor, formatStatus, formatTokens, renderBar } from './format'
 
 test('bar puts the percent at the fill edge', async () => {
   expect(renderBar(0)).toBe('[0%░░░░░░░░░░]')
@@ -17,9 +17,20 @@ test('tokens shorten to k and M', async () => {
   expect(formatTokens(1_250_000)).toBe('1.3M')
 })
 
-test('status joins bar, tokens, model and branch', async () => {
+test('color stays off until the window fills', async () => {
+  expect(fillColor(null)).toBeUndefined()
+  expect(fillColor(49)).toBeUndefined()
+  expect(fillColor(50)).toBe('warning')
+  expect(fillColor(79)).toBe('warning')
+  expect(fillColor(80)).toBe('error')
+})
+
+test('status splits usage from model and branch', async () => {
   const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5' }
-  expect(formatStatus({ ...base, branch: 'main' })).toBe('[█6%░░░░░░░░░] 58k/1M | Opus 5.5 | main')
-  expect(formatStatus({ ...base, branch: null })).toBe('[█6%░░░░░░░░░] 58k/1M | Opus 5.5')
-  expect(formatStatus({ ...base, percent: null, tokens: null, branch: null })).toBe('[--%░░░░░░░░░░] -/1M | Opus 5.5')
+  expect(formatStatus({ ...base, branch: 'main' })).toEqual({
+    usage: '[█6%░░░░░░░░░] 58k/1M',
+    details: ' | Opus 5.5 | main',
+  })
+  expect(formatStatus({ ...base, branch: null }).details).toBe(' | Opus 5.5')
+  expect(formatStatus({ ...base, percent: null, tokens: null, branch: null }).usage).toBe('[--%░░░░░░░░░░] -/1M')
 })
