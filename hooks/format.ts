@@ -11,6 +11,7 @@ const WARN_PERCENT = 50
 const ALERT_PERCENT = 80
 const MAX_BRANCH_LENGTH = 24
 const ELLIPSIS = '…'
+const MODEL_PREFIX = 'claude-'
 // Short names for the rate-limit windows; an unknown kind shows as given
 const LIMIT_LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: 'spend' }
 
@@ -46,6 +47,10 @@ export function shortenBranch(branch: string): string {
     return branch
   }
   return `${branch.slice(0, MAX_BRANCH_LENGTH - ELLIPSIS.length)}${ELLIPSIS}`
+}
+
+export function shortenModel(model: string): string {
+  return model.startsWith(MODEL_PREFIX) ? model.slice(MODEL_PREFIX.length) : model
 }
 
 // A stretch of the line in one color; undefined draws it dim
@@ -90,7 +95,7 @@ export function formatStatus(snapshot: Snapshot, maxWidth = Infinity): Run[] {
   if (snapshot.rateLimits.length > 0) {
     segments.push(limitRuns(snapshot.rateLimits))
   }
-  segments.push([dim(snapshot.model)])
+  segments.push([dim(shortenModel(snapshot.model))])
   if (snapshot.branch !== null) {
     segments.push([dim(shortenBranch(snapshot.branch))])
   }

@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { fillColor, formatStatus, formatTokens, renderBar, shortenBranch } from './format'
+import { fillColor, formatStatus, formatTokens, renderBar, shortenBranch, shortenModel } from './format'
 
 test('bar puts the percent at the fill edge', async () => {
   expect(renderBar(0)).toBe('[0%░░░░░░░░░░]')
@@ -29,6 +29,11 @@ test('long branch names keep their head', async () => {
   expect(shortenBranch('main')).toBe('main')
   expect(shortenBranch('feat/TPDX4-1426_abcdefgh')).toBe('feat/TPDX4-1426_abcdefgh')
   expect(shortenBranch('np/TPDX3-1804_record-postgres-lro-version')).toBe('np/TPDX3-1804_record-po…')
+})
+
+test('the model drops its claude- prefix', async () => {
+  expect(shortenModel('claude-opus-5-5')).toBe('opus-5-5')
+  expect(shortenModel('Opus 5.5')).toBe('Opus 5.5')
 })
 
 test('status colors usage alone and keeps the rest dim', async () => {
