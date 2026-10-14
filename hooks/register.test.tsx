@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
-import type { On, RenderSurface } from 'claude-code'
+import type { On, RenderSurface, SessionRateLimit } from 'claude-code'
 
 const WINDOW = 200_000
 
@@ -16,10 +16,12 @@ function answerHost(on: On, branch: string): void {
   on('session.measure', (_$, e) => ({ changed: e.changed }))
 }
 
-async function drawAt($: Engine, percent: number, modes: string[] = [], surface: RenderSurface = 'terminal') {
+type Draw = { percent: number; modes?: string[]; surface?: RenderSurface; rateLimits?: SessionRateLimit[] }
+
+async function drawAt($: Engine, { percent, modes = [], surface = 'terminal', rateLimits = [] }: Draw) {
   await $.session.measure({
     context: { tokens: (WINDOW * percent) / 100, window: WINDOW, percent },
-    rateLimits: [],
+    rateLimits,
     changed: ['context'],
   })
   const ui = await $.ui.mount({ plugin: 'context-bar', surface, component: 'SessionMode', props: { modes } })
@@ -28,7 +30,7 @@ async function drawAt($: Engine, percent: number, modes: string[] = [], surface:
 
 test('usage stays dim below the warning level', async ($, on) => {
   answerHost(on, 'main')
-  expect(await drawAt($, 30)).toMatchObject({
+  expect(await drawAt($, { percent: 30 })).toMatchObject({
     type: 'Text',
     children: [{ type: 'Text', props: { dimColor: true }, children: ['[███30%░░░░░░░] 60k/200k | Opus 5.5 | main'] }],
   })
@@ -36,18 +38,30 @@ test('usage stays dim below the warning level', async ($, on) => {
 
 test('usage turns warning, then error, as the window fills', async ($, on) => {
   answerHost(on, 'main')
-  expect(await drawAt($, 60)).toMatchObject({ children: [{ props: { color: 'warning' } }, { props: { dimColor: true } }] })
-  expect(await drawAt($, 85)).toMatchObject({ children: [{ props: { color: 'error' } }, { props: { dimColor: true } }] })
+  expect(await drawAt($, { percent: 60 })).toMatchObject({ children: [{ props: { color: 'warning' } }, { props: { dimColor: true } }] })
+  expect(await drawAt($, { percent: 85 })).toMatchObject({ children: [{ props: { color: 'error' } }, { props: { dimColor: true } }] })
 })
 
 test('other modes stay ahead of the bar', async ($, on) => {
   answerHost(on, 'main')
-  expect(await drawAt($, 30, ['focus', 'memory paused'], 'desktop')).toMatchObject({
+  expect(await drawAt($, { percent: 30, modes: ['focus', 'memory paused'], surface: 'desktop' })).toMatchObject({
     children: [{ props: { dimColor: true }, children: ['focus & memory paused & '] }, {}],
   })
 })
 
 test('a detached HEAD shows its short commit', async ($, on) => {
   answerHost(on, DETACHED)
-  expect(await drawAt($, 30)).toMatchObject({ children: [{ children: ['[███30%░░░░░░░] 60k/200k | Opus 5.5 | (abc1234)'] }] })
+  expect(await drawAt($, { percent: 30 })).toMatchObject({ children: [{ children: ['[███30%░░░░░░░] 60k/200k | Opus 5.5 | (abc1234)'] }] })
+})
+
+test('a filling rate-limit window takes a color of its own', async ($, on) => {
+  answerHost(on, 'main')
+  const rateLimits = [{ kind: 'five_hour', percentUsed: 90 }]
+  expect(await drawAt($, { percent: 30, rateLimits })).toMatchObject({
+    children: [
+      { props: { dimColor: true }, children: ['[███30%░░░░░░░] 60k/200k | '] },
+      { props: { color: 'error' }, children: ['5h 90%'] },
+      { props: { dimColor: true }, children: [' | Opus 5.5 | main'] },
+    ],
+  })
 })

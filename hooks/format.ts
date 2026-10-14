@@ -1,15 +1,18 @@
 import type { ThemeKey } from 'claude-code'
 
-import type { Snapshot } from '../types'
+import type { RateLimit, Snapshot } from '../types'
 
 const BAR_WIDTH = 10
 const FILLED_CHAR = '█'
 const EMPTY_CHAR = '░'
 const SEPARATOR = ' | '
+const LIMIT_SEPARATOR = ' · '
 const WARN_PERCENT = 50
 const ALERT_PERCENT = 80
 const MAX_BRANCH_LENGTH = 24
 const ELLIPSIS = '…'
+// Short names for the rate-limit windows; an unknown kind shows as given
+const LIMIT_LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: 'spend' }
 
 // The percent sits at the fill edge so it hides no cells
 export function renderBar(percent: number | null): string {
@@ -66,6 +69,14 @@ function mergeRuns(runs: Run[]): Run[] {
   return merged
 }
 
+function limitRuns(rateLimits: readonly RateLimit[]): Run[] {
+  return rateLimits.flatMap((limit, index) => {
+    const percent = Math.round(limit.percentUsed)
+    const run = { text: `${LIMIT_LABELS[limit.kind] ?? limit.kind} ${percent}%`, color: fillColor(percent) }
+    return index === 0 ? [run] : [dim(LIMIT_SEPARATOR), run]
+  })
+}
+
 export function formatStatus(snapshot: Snapshot): Run[] {
   const used = snapshot.tokens === null ? '-' : formatTokens(snapshot.tokens)
   const usage = `${renderBar(snapshot.percent)} ${used}/${formatTokens(snapshot.window)}`
@@ -73,5 +84,10 @@ export function formatStatus(snapshot: Snapshot): Run[] {
   if (snapshot.branch !== null) {
     parts.push(shortenBranch(snapshot.branch))
   }
-  return mergeRuns([{ text: usage, color: fillColor(snapshot.percent) }, ...parts.map(part => dim(`${SEPARATOR}${part}`))])
+  const runs: Run[] = [{ text: usage, color: fillColor(snapshot.percent) }]
+  if (snapshot.rateLimits.length > 0) {
+    runs.push(dim(SEPARATOR), ...limitRuns(snapshot.rateLimits))
+  }
+  runs.push(...parts.map(part => dim(`${SEPARATOR}${part}`)))
+  return mergeRuns(runs)
 }

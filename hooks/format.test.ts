@@ -32,7 +32,7 @@ test('long branch names keep their head', async () => {
 })
 
 test('status colors usage alone and keeps the rest dim', async () => {
-  const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5' }
+  const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5', rateLimits: [] }
   expect(formatStatus({ ...base, branch: 'main' })).toEqual([
     { text: '[█6%░░░░░░░░░] 58k/1M | Opus 5.5 | main', color: undefined },
   ])
@@ -44,4 +44,20 @@ test('status colors usage alone and keeps the rest dim', async () => {
     '[█6%░░░░░░░░░] 58k/1M | Opus 5.5 | feature/OTOP-6363-mpdp-…',
   )
   expect(formatStatus({ ...base, percent: null, tokens: null, branch: null })[0]?.text).toBe('[--%░░░░░░░░░░] -/1M | Opus 5.5')
+})
+
+test('rate-limit windows sit after usage, each colored by its fill', async () => {
+  const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5', branch: null }
+  const rateLimits = [
+    { kind: 'five_hour', percentUsed: 23.5 },
+    { kind: 'seven_day', percentUsed: 81 },
+    { kind: 'other_window', percentUsed: 49.6 },
+  ]
+  expect(formatStatus({ ...base, rateLimits })).toEqual([
+    { text: '[█6%░░░░░░░░░] 58k/1M | 5h 24% · ', color: undefined },
+    { text: '7d 81%', color: 'error' },
+    { text: ' · ', color: undefined },
+    { text: 'other_window 50%', color: 'warning' },
+    { text: ' | Opus 5.5', color: undefined },
+  ])
 })

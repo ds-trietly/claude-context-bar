@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, SessionContextUsage } from 'claude-code'
+import type { EngineInterface, Register, SessionUsage } from 'claude-code'
 
 import { formatStatus } from './format'
 import type { Run } from './format'
@@ -33,7 +33,10 @@ async function gitBranch($: EngineInterface): Promise<string | null> {
   return commit === null ? null : `(${commit})`
 }
 
-async function refresh($: EngineInterface, context: SessionContextUsage): Promise<void> {
+async function refresh(
+  $: EngineInterface,
+  { context, rateLimits }: Pick<SessionUsage, 'context' | 'rateLimits'>,
+): Promise<void> {
   const [model, branch] = await Promise.all([$.session.model(), gitBranch($)])
   await update($, snapshot, () => ({
     percent: context.percent ?? null,
@@ -41,20 +44,20 @@ async function refresh($: EngineInterface, context: SessionContextUsage): Promis
     window: context.window,
     model,
     branch,
+    rateLimits,
   }))
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
-    const { context } = await $.session.usage()
-    await refresh($, context)
+    await refresh($, await $.session.usage())
     return result
   })
 
   on('session.measure', async ($, e, next) => {
     const result = await next(e)
-    await refresh($, e.context)
+    await refresh($, e)
     return result
   })
 
