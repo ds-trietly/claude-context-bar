@@ -38,8 +38,9 @@ export const register: Register = on => {
   })
 
   on('session.measure', async ($, e, next) => {
+    const result = await next(e)
     await refresh($, e.context)
-    return next(e)
+    return result
   })
 
   // SessionMode is the dim label slot at the right of the footer row
