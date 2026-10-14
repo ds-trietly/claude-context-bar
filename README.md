@@ -14,6 +14,17 @@ Claude Code mod: context window fill, token count, rate limits, model and git br
 
 ## Install
 
+At a Claude Code prompt (answer `y` to add the marketplace, then pick a scope):
+
+```
+/plugin install context-bar --marketplace OWNER/REPO
+```
+
+- Shell: `claude plugin install context-bar --marketplace OWNER/REPO`
+- Update: `claude plugin update context-bar`, then restart Claude Code
+
+## Run from a working copy
+
 1. Clone:
 
    ```sh
