@@ -1,14 +1,14 @@
 # Claude Mod: context-bar
 
-Claude Code mod: context window fill, token count, rate limits, model and git branch at the right of the prompt footer.
+Claude Code mod: context window fill, token count, session cost, model and git branch at the right of the prompt footer.
 
 ```
-[████40%░░░░░░] 80k/200k | 5h 24% · 7d 61% | opus-5-5 | main
+[████40%░░░░░░] 80k/200k | $1.23 | opus-5-5 | main
 ```
 
-- Bar and each rate limit: dim below 50%, the theme's warning color from 50%, error color from 80%
-- Rate limits show on a subscription only
-- Narrow terminal: branch drops first, then model, then rate limits
+- Bar: dim below 50%, the theme's warning color from 50%, error color from 80%
+- Cost: the session total, as `/cost` shows it
+- Narrow terminal: branch drops first, then model, then cost
 
 - **Limitation**: after `/compact` or a model switch, the bar updates only with the next reply
 
@@ -21,7 +21,17 @@ At a Claude Code prompt (answer `y` to add the marketplace, then pick a scope):
 ```
 
 - Shell: `claude plugin install context-bar --marketplace OWNER/REPO`
-- Update: `claude plugin update context-bar`, then restart Claude Code
+
+## Update
+
+After the repo gets new commits, then restart Claude Code:
+
+```sh
+# re-fetch the marketplace catalog to be aware about new version
+claude plugin marketplace update context-bar
+# pull new plugin files
+claude plugin update context-bar
+```
 
 ## Run from a working copy
 
