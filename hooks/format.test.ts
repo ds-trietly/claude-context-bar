@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { fillColor, formatStatus, formatTokens, renderBar, shortenBranch, shortenModel } from './format'
+import { fillColor, formatCost, formatStatus, formatTokens, renderBar, shortenBranch, shortenModel } from './format'
 
 test('bar puts the percent at the fill edge', async () => {
   expect(renderBar(0)).toBe('[0%░░░░░░░░░░]')
@@ -37,7 +37,7 @@ test('the model drops its claude- prefix', async () => {
 })
 
 test('status colors usage alone and keeps the rest dim', async () => {
-  const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5', rateLimits: [] }
+  const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5', costUsd: null }
   expect(formatStatus({ ...base, branch: 'main' })).toEqual([
     { text: '[█6%░░░░░░░░░] 58k/1M | Opus 5.5 | main', color: undefined },
   ])
@@ -51,35 +51,29 @@ test('status colors usage alone and keeps the rest dim', async () => {
   expect(formatStatus({ ...base, percent: null, tokens: null, branch: null })[0]?.text).toBe('[--%░░░░░░░░░░] -/1M | Opus 5.5')
 })
 
-test('rate-limit windows sit after usage, each colored by its fill', async () => {
-  const base = { percent: 6, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5', branch: null }
-  const rateLimits = [
-    { kind: 'five_hour', percentUsed: 23.5 },
-    { kind: 'seven_day', percentUsed: 81 },
-    { kind: 'other_window', percentUsed: 49.6 },
-  ]
-  expect(formatStatus({ ...base, rateLimits })).toEqual([
-    { text: '[█6%░░░░░░░░░] 58k/1M | 5h 24% · ', color: undefined },
-    { text: '7d 81%', color: 'error' },
-    { text: ' · ', color: undefined },
-    { text: 'other_window 50%', color: 'warning' },
-    { text: ' | Opus 5.5', color: undefined },
+test('cost sits dim after usage, in dollars and cents', async () => {
+  expect(formatCost(0)).toBe('$0.00')
+  expect(formatCost(1.236)).toBe('$1.24')
+  const snapshot = { percent: 60, tokens: 58_000, window: 1_000_000, model: 'Opus 5.5', branch: null, costUsd: 12.5 }
+  expect(formatStatus(snapshot)).toEqual([
+    { text: '[██████60%░░░░] 58k/1M', color: 'warning' },
+    { text: ' | $12.50 | Opus 5.5', color: undefined },
   ])
 })
 
-test('narrow lines drop branch, then model, then limits, never usage', async () => {
+test('narrow lines drop branch, then model, then cost, never usage', async () => {
   const snapshot = {
     percent: 6,
     tokens: 58_000,
     window: 1_000_000,
     model: 'Opus 5.5',
     branch: 'main',
-    rateLimits: [{ kind: 'five_hour', percentUsed: 3 }],
+    costUsd: 1.5,
   }
   const lineAt = (maxWidth: number) => formatStatus(snapshot, maxWidth).map(run => run.text).join('')
-  expect(lineAt(47)).toBe('[█6%░░░░░░░░░] 58k/1M | 5h 3% | Opus 5.5 | main')
-  expect(lineAt(46)).toBe('[█6%░░░░░░░░░] 58k/1M | 5h 3% | Opus 5.5')
-  expect(lineAt(39)).toBe('[█6%░░░░░░░░░] 58k/1M | 5h 3%')
+  expect(lineAt(47)).toBe('[█6%░░░░░░░░░] 58k/1M | $1.50 | Opus 5.5 | main')
+  expect(lineAt(46)).toBe('[█6%░░░░░░░░░] 58k/1M | $1.50 | Opus 5.5')
+  expect(lineAt(39)).toBe('[█6%░░░░░░░░░] 58k/1M | $1.50')
   expect(lineAt(28)).toBe('[█6%░░░░░░░░░] 58k/1M')
   expect(lineAt(0)).toBe('[█6%░░░░░░░░░] 58k/1M')
 })

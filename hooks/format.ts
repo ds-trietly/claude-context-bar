@@ -1,19 +1,16 @@
 import type { ThemeKey } from 'claude-code'
 
-import type { RateLimit, Snapshot } from '../types'
+import type { Snapshot } from '../types'
 
 const BAR_WIDTH = 10
 const FILLED_CHAR = '█'
 const EMPTY_CHAR = '░'
 const SEPARATOR = ' | '
-const LIMIT_SEPARATOR = ' · '
 const WARN_PERCENT = 50
 const ALERT_PERCENT = 80
 const MAX_BRANCH_LENGTH = 24
 const ELLIPSIS = '…'
 const MODEL_PREFIX = 'claude-'
-// Short names for the rate-limit windows; an unknown kind shows as given
-const LIMIT_LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: 'spend' }
 
 // The percent sits at the fill edge so it hides no cells
 export function renderBar(percent: number | null): string {
@@ -53,6 +50,10 @@ export function shortenModel(model: string): string {
   return model.startsWith(MODEL_PREFIX) ? model.slice(MODEL_PREFIX.length) : model
 }
 
+export function formatCost(usd: number): string {
+  return `$${usd.toFixed(2)}`
+}
+
 // A stretch of the line in one color; undefined draws it dim
 export type Run = { text: string; color: ThemeKey | undefined }
 
@@ -74,16 +75,8 @@ function mergeRuns(runs: Run[]): Run[] {
   return merged
 }
 
-function limitRuns(rateLimits: readonly RateLimit[]): Run[] {
-  return rateLimits.flatMap((limit, index) => {
-    const percent = Math.round(limit.percentUsed)
-    const run = { text: `${LIMIT_LABELS[limit.kind] ?? limit.kind} ${percent}%`, color: fillColor(percent) }
-    return index === 0 ? [run] : [dim(LIMIT_SEPARATOR), run]
-  })
-}
-
-function lineWidth(segments: Run[][]): number {
-  const textWidth = segments.flat().reduce((sum, run) => sum + run.text.length, 0)
+function lineWidth(segments: Run[]): number {
+  const textWidth = segments.reduce((sum, segment) => sum + segment.text.length, 0)
   return textWidth + SEPARATOR.length * (segments.length - 1)
 }
 
@@ -91,16 +84,16 @@ function lineWidth(segments: Run[][]): number {
 export function formatStatus(snapshot: Snapshot, maxWidth = Infinity): Run[] {
   const used = snapshot.tokens === null ? '-' : formatTokens(snapshot.tokens)
   const usage = `${renderBar(snapshot.percent)} ${used}/${formatTokens(snapshot.window)}`
-  const segments: Run[][] = [[{ text: usage, color: fillColor(snapshot.percent) }]]
-  if (snapshot.rateLimits.length > 0) {
-    segments.push(limitRuns(snapshot.rateLimits))
+  const segments: Run[] = [{ text: usage, color: fillColor(snapshot.percent) }]
+  if (snapshot.costUsd !== null) {
+    segments.push(dim(formatCost(snapshot.costUsd)))
   }
-  segments.push([dim(shortenModel(snapshot.model))])
+  segments.push(dim(shortenModel(snapshot.model)))
   if (snapshot.branch !== null) {
-    segments.push([dim(shortenBranch(snapshot.branch))])
+    segments.push(dim(shortenBranch(snapshot.branch)))
   }
   while (segments.length > 1 && lineWidth(segments) > maxWidth) {
     segments.pop()
   }
-  return mergeRuns(segments.flatMap((segment, index) => (index === 0 ? segment : [dim(SEPARATOR), ...segment])))
+  return mergeRuns(segments.flatMap((segment, index) => (index === 0 ? [segment] : [dim(SEPARATOR), segment])))
 }

@@ -37,7 +37,7 @@ async function gitBranch($: EngineInterface): Promise<string | null> {
 
 async function refresh(
   $: EngineInterface,
-  { context, rateLimits }: Pick<SessionUsage, 'context' | 'rateLimits'>,
+  { context, cost }: Pick<SessionUsage, 'context' | 'cost'>,
 ): Promise<void> {
   const [model, branch] = await Promise.all([$.session.model(), gitBranch($)])
   await update($, snapshot, () => ({
@@ -46,7 +46,7 @@ async function refresh(
     window: context.window,
     model,
     branch,
-    rateLimits,
+    costUsd: cost?.usd ?? null,
   }))
 }
 

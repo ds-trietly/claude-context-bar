@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
-import type { On, RenderSurface, SessionRateLimit } from 'claude-code'
+import type { On, RenderSurface } from 'claude-code'
 
 const WINDOW = 200_000
 
@@ -20,14 +20,15 @@ type Draw = {
   percent: number
   modes?: string[]
   surface?: RenderSurface
-  rateLimits?: SessionRateLimit[]
+  costUsd?: number
   columns?: number
 }
 
-async function drawAt($: Engine, { percent, modes = [], surface = 'terminal', rateLimits = [], columns }: Draw) {
+async function drawAt($: Engine, { percent, modes = [], surface = 'terminal', costUsd, columns }: Draw) {
   await $.session.measure({
     context: { tokens: (WINDOW * percent) / 100, window: WINDOW, percent },
-    rateLimits,
+    rateLimits: [],
+    cost: costUsd === undefined ? undefined : { usd: costUsd },
     changed: ['context'],
   })
   const viewport = columns === undefined ? undefined : { columns, rows: 24 }
@@ -61,15 +62,10 @@ test('a detached HEAD shows its short commit', async ($, on) => {
   expect(await drawAt($, { percent: 30 })).toMatchObject({ children: [{ children: ['[███30%░░░░░░░] 60k/200k | Opus 5.5 | (abc1234)'] }] })
 })
 
-test('a filling rate-limit window takes a color of its own', async ($, on) => {
+test('the session cost sits between usage and model', async ($, on) => {
   answerHost(on, 'main')
-  const rateLimits = [{ kind: 'five_hour', percentUsed: 90 }]
-  expect(await drawAt($, { percent: 30, rateLimits })).toMatchObject({
-    children: [
-      { props: { dimColor: true }, children: ['[███30%░░░░░░░] 60k/200k | '] },
-      { props: { color: 'error' }, children: ['5h 90%'] },
-      { props: { dimColor: true }, children: [' | Opus 5.5 | main'] },
-    ],
+  expect(await drawAt($, { percent: 30, costUsd: 0.42 })).toMatchObject({
+    children: [{ props: { dimColor: true }, children: ['[███30%░░░░░░░] 60k/200k | $0.42 | Opus 5.5 | main'] }],
   })
 })
 
